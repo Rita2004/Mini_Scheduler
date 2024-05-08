@@ -57,8 +57,8 @@ int is_empty(node_t *queue) {
 
 // Helper function (optional) - For formatting the queue as a string
 char* queue_to_string(node_t* queue) {
-    char *str = malloc(100 * sizeof(char)); // Adjust buffer size as needed
-    str[0] = '\0'; // Start with an empty string
+    char *str = malloc(100 * sizeof(char)); 
+    str[0] = '\0'; 
 
     if (is_empty(queue)) {
         strcat(str, "[]");
