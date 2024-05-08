@@ -2,10 +2,12 @@
 #include "queue.h"
 #include <stdio.h>
 #include <string.h> 
+#include <limits.h> // For INT_MAX
 
 #define CPU_CAPABILITY 20 
 
-int load_workload(const char *filename, workload_item **workload_out, size_t *workload_size_out); // In workload.c
+// Function from workload.c
+int load_workload(const char *filename, workload_item **workload_out, size_t *workload_size_out); 
 
 void run_scheduler(workload_item *workload, size_t workload_size) {
     node_t *running_queue = NULL;
@@ -42,32 +44,58 @@ void run_scheduler(workload_item *workload, size_t workload_size) {
         while (!is_empty(pending_queue) && cpu_occupancy < CPU_CAPABILITY) {
             int pid = dequeue(&pending_queue);
             int prio = 0; 
+
+            // Find the priority of the process
             for (int i = 0; i < workload_size; i++) {
                 if (workload[i].pid == pid) {
                     prio = workload[i].prio;
                     break;
                 }
             }
+
             if (cpu_occupancy + prio <= CPU_CAPABILITY) {
                 enqueue(&running_queue, prio, pid);
                 cpu_occupancy += prio;
                 printf("  > schedule pid=%d prio=%d ('%s') ... added to running queue\n",
                        pid, prio, get_process_cmd(workload, workload_size, pid));
             } else { 
-                enqueue(&pending_queue, prio, pid); 
+                enqueue(&pending_queue, prio, pid); // Put back in pending
                 break; 
             }
         }
 
         // 3. Handle de-scheduling if the CPU is full
         while (!is_empty(running_queue) && cpu_occupancy > CPU_CAPABILITY) { 
-            int pid = dequeue(&running_queue);
-            int prio = 0;
+            // Find the node with the lowest priority
+            int min_prio = INT_MAX;
+            node_t *pre = NULL;
+            node_t *target_node = running_queue;
+
+            while (target_node != NULL) {
+                if (target_node->prio < min_prio) {
+                    min_prio = target_node->prio;
+                    pre = target_node;
+                }
+                target_node = target_node->next;
+            }
+
+            // Dequeue the node with the lowest priority
+            int pid, prio;
+            if (pre == NULL) { // Dequeue from the head
+                pid = dequeue(&running_queue);
+            } else {
+                pid = pre->next->pid; 
+                prio = pre->next->prio;
+                node_t *temp = pre->next;
+                pre->next = pre->next->next; 
+                free(temp);
+            }
+
             for (int i = 0; i < workload_size; i++) {
                 if (workload[i].pid == pid) {
                     prio = workload[i].prio;
-                    workload[i].idle++; // Increment idle time
-                    workload[i].tf++;    // Delay estimated finish
+                    workload[i].idle++; 
+                    workload[i].tf++;    
                     break;
                 }
             }
@@ -84,19 +112,13 @@ void run_scheduler(workload_item *workload, size_t workload_size) {
     }
 }
 
-// Helper to get a process's command name
 char* get_process_cmd(workload_item* workload, size_t size, int pid) {
     for (int i = 0; i < size; i++) {
         if (workload[i].pid == pid) {
             return workload[i].cmd;
         }
     }
-    return ""; 
-}
-
-// Helper to display the queues 
-char* queue_to_string(node_t* queue) {
-    // ... Implementation from previous response ...
+    return ""; // Process not found
 }
 
 int main(int argc, char *argv[]) {
@@ -115,6 +137,11 @@ int main(int argc, char *argv[]) {
 
     run_scheduler(workload, workload_size);
 
-    // ... (Clean up memory) ... 
+    // Free dynamically allocated memory
+    for (int i = 0; i < workload_size; i++) {
+        free(workload[i].cmd); // Free command strings
+    }
+    free(workload); 
     return 0;
 }
+
