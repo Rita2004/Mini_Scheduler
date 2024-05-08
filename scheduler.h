@@ -15,6 +15,7 @@ typedef struct workload_item_t {
 
 int load_workload(const char *filename, workload_item **workload_out, size_t *workload_size_out);
 void run_scheduler(workload_item *workload, size_t workload_size); 
-void print_chronogram(workload_item *workload, size_t workload_size);
+char* get_process_cmd(workload_item* workload, size_t size, int pid);
+
 
 #endif 
