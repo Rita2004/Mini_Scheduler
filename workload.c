@@ -1,4 +1,4 @@
-#include "scheduler.h"
+#include "workload.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +10,6 @@ int load_workload(const char *filename, workload_item **workload_out, size_t *wo
         return -1;
     }
 
-    // Rough initial capacity estimate
     size_t capacity = 10; 
     workload_item *workload = malloc(capacity * sizeof(workload_item));
     if (workload == NULL) {
@@ -20,7 +19,7 @@ int load_workload(const char *filename, workload_item **workload_out, size_t *wo
     }
 
     size_t count = 0;
-    char line[100]; // Adjust the line buffer size if needed
+    char line[100]; 
     while (fgets(line, sizeof(line), fp) != NULL) {
         char *token = strtok(line, " \t\n"); 
         int i = 0;
@@ -30,9 +29,9 @@ int load_workload(const char *filename, workload_item **workload_out, size_t *wo
                 case 1: workload[count].ppid = atoi(token); break;
                 case 2: workload[count].ts = atoi(token); break;
                 case 3: workload[count].tf = atoi(token); break;
-                case 4: workload[count].idle = 0; break; // Initialize idle
+                case 4: workload[count].idle = 0; break; 
                 case 5: 
-                    workload[count].cmd = malloc(strlen(token) + 1); // Allocate for command
+                    workload[count].cmd = malloc(strlen(token) + 1); 
                     strcpy(workload[count].cmd, token); 
                     break;
                 case 6: workload[count].prio = atoi(token); break;
@@ -48,7 +47,6 @@ int load_workload(const char *filename, workload_item **workload_out, size_t *wo
 
         count++;
         if (count >= capacity) {
-            // Reallocate if needed
             capacity *= 2; 
             workload_item *temp = realloc(workload, capacity * sizeof(workload_item)); 
             if (temp == NULL) {
