@@ -1,13 +1,15 @@
 #include "queue.h"
 #include <string.h>
 #include <stdlib.h>
-
+#include "scheduler.h"
 // Create a new queue node
-node_t *create_node(int prio, int pid) {
+node_t *create_node(int prio, int pid)
+{
     node_t *new_node = malloc(sizeof(node_t));
-    if (new_node == NULL) {
+    if (new_node == NULL)
+    {
         fprintf(stderr, "Memory allocation error!\n");
-        exit(1); 
+        exit(1);
     }
 
     new_node->prio = prio;
@@ -17,14 +19,19 @@ node_t *create_node(int prio, int pid) {
 }
 
 // Add a node to the end of the queue
-void enqueue(node_t **queue, int prio, int pid) {
+void enqueue(node_t **queue, int prio, int pid)
+{
     node_t *new_node = create_node(prio, pid);
 
-    if (*queue == NULL) {
+    if (*queue == NULL)
+    {
         *queue = new_node;
-    } else {
+    }
+    else
+    {
         node_t *current = *queue;
-        while (current->next != NULL) {
+        while (current->next != NULL)
+        {
             current = current->next;
         }
         current->next = new_node;
@@ -32,8 +39,10 @@ void enqueue(node_t **queue, int prio, int pid) {
 }
 
 // Remove and return the pid at the front of the queue
-int dequeue(node_t **queue) {
-    if (*queue == NULL) { 
+int dequeue(node_t **queue)
+{
+    if (*queue == NULL)
+    {
         return -1; // Or handle the empty queue case differently
     }
 
@@ -44,35 +53,44 @@ int dequeue(node_t **queue) {
     return pid;
 }
 
-// Get the pid at the front of the queue without removing 
-int peek(node_t *queue) {
-    if (queue == NULL) {
+// Get the pid at the front of the queue without removing
+int peek(node_t *queue)
+{
+    if (queue == NULL)
+    {
         return -1; // Or handle the empty queue case differently
     }
     return queue->pid;
 }
 
 // Check if the queue is empty
-int is_empty(node_t *queue) {
+int is_empty(node_t *queue)
+{
     return queue == NULL;
 }
 
 // Helper function (optional) - For formatting the queue as a string
-char* queue_to_string(node_t* queue) {
-    char *str = malloc(100 * sizeof(char)); 
-    str[0] = '\0'; 
+char *queue_to_string(node_t *queue)
+{
+    char *str = malloc(100 * sizeof(char));
+    str[0] = '\0';
 
-    if (is_empty(queue)) {
+    if (is_empty(queue))
+    {
         strcat(str, "[]");
-    } else {
+    }
+    else
+    {
         strcat(str, "[");
         node_t *current = queue;
-        while (current != NULL) {
+        while (current != NULL)
+        {
             char buffer[20];
-            sprintf(buffer, "(%d,%d)", current->prio, current->pid); 
+            sprintf(buffer, "(%d,%d)", current->prio, current->pid);
             strcat(str, buffer);
             current = current->next;
-            if (current != NULL) {
+            if (current != NULL)
+            {
                 strcat(str, ", ");
             }
         }
