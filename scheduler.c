@@ -163,3 +163,27 @@ char *get_process_cmd(workload_item *workload, size_t size, int pid)
     }
     return ""; // Process not found
 }
+
+int main()
+{
+    // Load the workload from a file
+    workload_item *workload;
+    size_t workload_size;
+    if (load_workload("workload_1.txt", &workload, &workload_size) != 0)
+    {
+        fprintf(stderr, "Error loading workload.\n");
+        return 1;
+    }
+
+    // Run the scheduler
+    run_scheduler(workload, workload_size);
+
+    // Free allocated memory
+    for (size_t i = 0; i < workload_size; ++i)
+    {
+        free(workload[i].cmd);
+    }
+    free(workload);
+
+    return 0;
+}
