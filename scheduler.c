@@ -1,7 +1,8 @@
 #include "scheduler.h"
 #include "queue.h"
 #include <stdio.h>
-#include <string.h> 
+#include <stdlib.h>
+#include <string.h>
 #include <limits.h> // For INT_MAX
 
 #define CPU_CAPABILITY 20 
