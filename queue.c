@@ -1,4 +1,6 @@
 #include "queue.h"
+#include <string.h>
+#include <stdlib.h>
 
 // Create a new queue node
 node_t *create_node(int prio, int pid) {
