@@ -98,3 +98,39 @@ char *queue_to_string(node_t *queue)
     }
     return str;
 }
+
+
+void remove_from_queue(node_t **queue, int pid)
+{
+    if (*queue == NULL)
+    {
+        return;
+    }
+
+    node_t *current = *queue;
+    node_t *prev = NULL;
+
+    // Check if the node to be removed is the head
+    if (current != NULL && current->pid == pid)
+    {
+        *queue = current->next; 
+        free(current);
+        return;
+    }
+
+    // Search for the node to be removed, keeping track of the previous node
+    while (current != NULL && current->pid != pid)
+    {
+        prev = current;
+        current = current->next;
+    }
+
+    // If the pid was not present in the queue
+    if (current == NULL)
+    {
+        return;
+    }
+
+    prev->next = current->next;
+    free(current);
+}

@@ -11,122 +11,85 @@ int load_workload(const char *filename, workload_item **workload_out, size_t *wo
 
 void run_scheduler(workload_item *workload, size_t workload_size)
 {
+    int cpu_occupancy = 0;
     node_t *running_queue = NULL;
     node_t *pending_queue = NULL;
 
     int max_timestep = 0;
-    for (int i = 0; i < workload_size; i++)
-    {
-        if (workload[i].tf > max_timestep)
-        {
-            max_timestep = workload[i].tf;
-        }
+    // Initialize the pending_queue with all workload items
+    for (size_t i = 0; i < workload_size; i++) {
+        enqueue(&pending_queue, workload[i].prio, workload[i].pid);
     }
 
-    for (int t = 0; t <= max_timestep; t++)
-    {
-        printf("[t=%d]\n", t);
-
-        // 1. Identify possible and current processes
-        for (int i = 0; i < workload_size; i++)
-        {
-            if (workload[i].tf <= t)
-            {
-                continue; // Process is finished
-            }
-            if (workload[i].ts <= t && workload[i].tf > t)
-            {
-                // Process is current, add it to the pending queue if not already present
-                if (!contains_pid(running_queue, workload[i].pid) && !contains_pid(pending_queue, workload[i].pid))
-                {
-                    enqueue(&pending_queue, workload[i].prio, workload[i].pid);
-                }
-            }
-        }
-
-        // 2. Schedule processes from pending to running queue
-        int cpu_occupancy = 0;
-        while (!is_empty(pending_queue) && cpu_occupancy < CPU_CAPABILITY)
-        {
+    // Main scheduling loop
+    while (!is_empty(pending_queue)) {
+        // 1. Move processes from pending to running as long as there is CPU capability
+        while (!is_empty(pending_queue) && cpu_occupancy < CPU_CAPABILITY) {
             int pid = dequeue(&pending_queue);
             int prio = 0;
 
-            for (int i = 0; i < workload_size; i++)
-            {
-                if (workload[i].pid == pid)
-                {
+            for (size_t i = 0; i < workload_size; i++) {
+                if (workload[i].pid == pid) {
                     prio = workload[i].prio;
                     break;
                 }
             }
 
-            if (cpu_occupancy + prio <= CPU_CAPABILITY)
-            {
+            if (cpu_occupancy + prio <= CPU_CAPABILITY) {
                 enqueue(&running_queue, prio, pid);
                 cpu_occupancy += prio;
                 printf("  > schedule pid=%d prio=%d ('%s') ... added to running queue\n", pid, prio, get_process_cmd(workload, workload_size, pid));
-            }
-            else
-            {
-                enqueue(&pending_queue, prio, pid); // Put back in pending
-                break;
-            }
-        }
+            } else {
+                // Find the minimum priority in the running queue
+                int min_prio = INT_MAX;
+                node_t *min_prio_node = running_queue;
+                node_t *current = running_queue;
+                node_t *prev = NULL;
+                node_t *min_prio_prev = NULL;
 
-        // 3. Handle de-scheduling if the CPU is full
-        while (!is_empty(running_queue) && cpu_occupancy > CPU_CAPABILITY)
-        {
-            // Find the node with the lowest priority
-            int min_prio = INT_MAX;
-            node_t *pre = NULL;
-            node_t *target_node = running_queue;
-
-            while (target_node != NULL)
-            {
-                if (target_node->prio < min_prio)
-                {
-                    min_prio = target_node->prio;
-                    pre = target_node;
+                while (current != NULL) {
+                    if (current->prio < min_prio) {
+                        min_prio = current->prio;
+                        min_prio_node = current;
+                        min_prio_prev = prev;
+                    }
+                    prev = current;
+                    current = current->next;
                 }
-                target_node = target_node->next;
-            }
 
-            // Dequeue and free the node with the lowest priority
-            int pid, prio;
-            if (pre == NULL)
-            { // Dequeue from the head
-                pid = dequeue(&running_queue);
-            }
-            else
-            {
-                pid = pre->next->pid;
-                prio = pre->next->prio;
-                node_t *temp = pre->next;
-                pre->next = pre->next->next;
-                free(temp); // Free the memory
-            }
+                if (min_prio < prio) {
+                    // Replace the process with the minimum priority if it has a lower priority than the new process
+                    int min_pid = min_prio_node->pid;
+                    if (min_prio_prev == NULL) {
+                        dequeue(&running_queue);
+                    } else {
+                        min_prio_prev->next = min_prio_node->next;
+                        free(min_prio_node);
+                    }
+                    enqueue(&running_queue, prio, pid);
+                    cpu_occupancy = cpu_occupancy - min_prio + prio;
 
-            for (int i = 0; i < workload_size; i++)
-            {
-                if (workload[i].pid == pid)
-                {
-                    workload[i].idle++;
-                    workload[i].tf++;
+                    for (size_t i = 0; i < workload_size; i++) {
+                        if (workload[i].pid == min_pid) {
+                            workload[i].idle++;
+                            workload[i].tf++;
+                            break;
+                        }
+                    }
+
+                    enqueue(&pending_queue, min_prio, min_pid);
+                    printf("  > schedule pid=%d prio=%d ('%s') ... added to running queue\n", pid, prio, get_process_cmd(workload, workload_size, pid));
+                    printf("  > schedule pid=%d prio=%d ('%s') ... removed from running queue\n", min_pid, min_prio, get_process_cmd(workload, workload_size, min_pid));
+                } else {
+                    enqueue(&pending_queue, prio, pid); // Put back in pending
+                    printf("  > schedule pid=%d prio=%d ('%s') ... can't fit. Pick process to put asleep: None, as min prio: pid=%d prio=%d ('%s') has greater priority\n",
+                           pid, prio, get_process_cmd(workload, workload_size, pid), min_prio_node->pid, min_prio, get_process_cmd(workload, workload_size, min_prio_node->pid));
                     break;
                 }
             }
-            enqueue(&pending_queue, prio, pid);
-            cpu_occupancy -= prio;
-
-            printf("  > schedule pid=%d prio=%d ('%s') ... removed from running queue\n",
-                   pid, prio, get_process_cmd(workload, workload_size, pid));
         }
-
-        printf("  > CPU occupation: CPU[0]=%d \n", cpu_occupancy);
-        printf("  > running: %s\n", queue_to_string(running_queue));
-        printf("  > pending: %s\n", queue_to_string(pending_queue));
     }
-
+    
     // Free the queues at the end
     while (!is_empty(running_queue))
     {

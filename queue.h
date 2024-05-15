@@ -16,4 +16,7 @@ int peek(node_t *queue);
 int is_empty(node_t *queue); 
 char* queue_to_string(node_t* queue); 
 
+void remove_from_queue(node_t **queue, int pid);
+
+
 #endif 
